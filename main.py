@@ -1,18 +1,28 @@
-from flask import Flask, request, jsohify
+import json
+
+from flask import Flask, request, jsonify
 from model.post import Posts
 
 posts = []
 
-app = Flask(_ _name_ _)
+app = Flask(__name__)
 
-@app.route(’/posts’, methods=[’POST’])
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Posts):
+            return {'body': obj.body, 'author': obj.author}
+        else:
+            return super().default(obj)
+
+@app.route('/post', methods=['POST'])
 def create_post():
     ''' {"body": "", "author": "TestName"} '''
-    post_json = request.get.json()
-    post = Posts(post_json['body'], post_json['author'])
+    post_json = request.get_json()
+    post = Posts(post_json["body"], post_json["author"])
     posts.append(post)
-    return jsohify({'status': 'success'})
+    print(posts)
+    return jsonify({'status': 'success'})
 
-@app.route(’/posts’, methods=[’GET’])
+@app.route('/post', methods=['GET'])
 def read_post():
-    return jsohify({'posts': posts})
+    return jsonify({'posts': posts})
