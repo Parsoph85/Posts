@@ -2,8 +2,11 @@
 Данные модули имеют свои свойства, описанные в самих модулях.
 Для хранения сущностей (объектов) будем юзать БД. В нашем случае легкую SQLite.
 В ней будет 2 таблицы соответственно модулям.
+
 Для обоснования процесса "Плодить сущности" модули выполняют специфические функции,
 которые можно было написать в одном скрипте.
+
+Кроме того, для уменьшения кода, отсутствует проверка на спецсимволы в запросах, использование несуществующих ИД.
 
 Описание запросов: Идентификатор; Метод; Тело запроса
 
@@ -11,16 +14,16 @@
 /posts ; POST ; {"body": "Text", "user": "Name"}
 
 Просмотр определенного поста:
-/posts/<post id> ; GET ; нет
+/posts?post_id=<ИД> ; GET ; нет
 
 Просмотр всех постов:
 /posts ; GET ; нет
 
 Изменение поста:
-/posts/<post id> ; PUT ; {"body": "Text", "user": "Name"}
+/posts?post_id=<ИД> ; PUT ; {"body": "Text", "user": "Name"}
 
 Удаление поста:
-/posts/<post id> ; DELETE ; нет
+/posts?post_id=<ИД> ; DELETE ; нет
 
 В отсутствии кода фронтенда, итогом работы будет вывод JSON
 """
@@ -37,7 +40,7 @@ app = Flask(__name__)
 conn = sqlite3.connect('posts.db')  # Создаем БД, если нет. И таблички, если нет
 cursor = conn.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS users
-                        (id_user INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, passwd TEXT, email TEXT)''')
+                        (user_id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, passwd TEXT, email TEXT)''')
 cursor.execute('''CREATE TABLE IF NOT EXISTS posts 
                        (post_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, body TEXT, rating INT)''')
 conn.commit()
@@ -59,35 +62,42 @@ def create_post():
     post = json.loads(json_data)  # ... адекватного преобразования JSON в словарь
     body = post.get('body')  # Вытаскиваем из запроса значения
     user = post.get('user')
-    posts = Posts().Create(body=body, user=user)  # Хитрой магией отправляем значения на запись в БД
+    posts = Posts().create(body=body, user=user)  # Хитрой магией отправляем значения на запись в БД
     return jsonify({'Status': posts})  # Информируем, что все хорошо
 
 
 @app.route('/posts', methods=['GET'])  # Выводим все посты
 def read_all_post():
-    posts = Posts().Read()
-    print(posts)  #{'body': 'Text', 'user': 'Name'},{'body': 'Text', 'user': 'Name'}
-    return jsonify({'posts': posts})  # Выводим все посты
+    posts = Posts().read()
+    return jsonify({'posts': posts})  # Экспорт в FE
 
 
-@app.route('/posts/<post_id>', methods=['GET'])  # Выводим нужный посты
-def read_post(post_id):
-    posts = Posts.post(post_id=post_id, action='read')
-    print(posts)
+@app.route('/posts/', methods=['GET'])  # Выводим нужный пост
+def read_post():
+    post_id = request.args.get('post_id', type=int)
+    posts = Posts().read(post_id=post_id)
+    return jsonify({'posts': posts})  # Экспорт в FE
 
 
-@app.route('/posts', methods=['DELETE'])
-def delete_post():
-    """ Пример запроса {"id": ""}
-    id - номер удаляемого поста"""
+@app.route('/posts/', methods=['DELETE']) # Удаляем нужный пост
+def del_post():
+    post_id = request.args.get('post_id', type=int)
+    posts = Posts().delete(post_id=post_id)
+    return jsonify({'posts': posts})  # Экспорт в FE
 
-    del_json = request.get_json()  # Получаем данные из запроса
-    json_data = json.dumps(del_json)  # Применяем кунг-фу для...
-    del_dict = json.loads(json_data)  # ... адекватного преобразования JSON в словарь
-    print(del_dict)
-    del_elem = "'id': '" + del_dict['id'] + "'"
-    print(del_elem)
 
-    #del posts[del_elem]
-    return jsonify({'status': 'success'})  # Информируем, что все хорошо
-    return jsonify({'posts': posts})
+@app.route('/posts/', methods=['PUT'])  # Изменяем нужный пост
+def change_post():
+    post_id = request.args.get('post_id', type=int)
+    post_json = request.get_json()  # Получаем данные из запроса
+    json_data = json.dumps(post_json)  # Применяем кунг-фу для...
+    post = json.loads(json_data)  # ... адекватного преобразования JSON в словарь
+    body = post.get('body')  # Вытаскиваем из запроса значения
+    user = post.get('user')
+    posts = Posts().change(post_id=post_id,body=body,user=user)
+    return jsonify({'posts': posts})  # Экспорт в FE
+
+"""
+Если реально кто-то читал этот код - нарисуйте в ответе змейку))) <XXXXXX(0)-<
+Спасибо за терпение.
+"""
