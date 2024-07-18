@@ -66,27 +66,22 @@ def create_post():
     return jsonify({'Status': posts})  # Информируем, что все хорошо
 
 
-@app.route('/posts', methods=['GET'])  # Выводим все посты
-def read_all_post():
-    posts = Posts().read()
-    return jsonify({'posts': posts})  # Экспорт в FE
 
-
-@app.route('/posts/', methods=['GET'])  # Выводим нужный пост
+@app.route('/posts', methods=['GET'])  # Выводим нужный пост. Если нет id - ставим 0
 def read_post():
-    post_id = request.args.get('post_id', type=int)
+    post_id = request.args.get('post_id', default=0, type=int)
     posts = Posts().read(post_id=post_id)
     return jsonify({'posts': posts})  # Экспорт в FE
 
 
-@app.route('/posts/', methods=['DELETE']) # Удаляем нужный пост
+@app.route('/posts', methods=['DELETE']) # Удаляем нужный пост
 def del_post():
     post_id = request.args.get('post_id', type=int)
     posts = Posts().delete(post_id=post_id)
     return jsonify({'posts': posts})  # Экспорт в FE
 
 
-@app.route('/posts/', methods=['PUT'])  # Изменяем нужный пост
+@app.route('/posts', methods=['PUT'])  # Изменяем нужный пост
 def change_post():
     post_id = request.args.get('post_id', type=int)
     post_json = request.get_json()  # Получаем данные из запроса
